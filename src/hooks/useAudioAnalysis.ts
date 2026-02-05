@@ -21,6 +21,12 @@ export function useAudioAnalysis(): UseAudioAnalysisReturn {
     setResult(null);
 
     try {
+      // Limit audio size to 5MB to prevent memory issues
+      const MAX_SIZE = 5 * 1024 * 1024;
+      if (audioBlob.size > MAX_SIZE) {
+        throw new Error('Audio file too large. Please use a file under 5MB or record a shorter clip.');
+      }
+
       // Convert blob to base64
       const reader = new FileReader();
       const base64Promise = new Promise<string>((resolve, reject) => {
