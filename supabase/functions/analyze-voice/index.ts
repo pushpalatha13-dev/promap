@@ -42,15 +42,29 @@ serve(async (req) => {
       throw new Error('No audio data provided');
     }
 
-    console.log('Received audio for analysis, mimeType:', mimeType);
+    // Check base64 size (roughly 4/3 of original)
+    const estimatedSize = (audio.length * 3) / 4;
+    if (estimatedSize > 5 * 1024 * 1024) {
+      throw new Error('Audio file too large. Maximum size is 5MB.');
+    }
 
-    // Decode base64 audio
-    const audioBytes = Uint8Array.from(atob(audio), c => c.charCodeAt(0));
+    console.log('Received audio for analysis, mimeType:', mimeType, 'size:', Math.round(estimatedSize / 1024), 'KB');
+
+    // Decode base64 audio more efficiently
+    const binaryString = atob(audio);
+    const len = binaryString.length;
+    const audioBytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      audioBytes[i] = binaryString.charCodeAt(i);
+    }
+    
+    // Determine file extension from mimeType
+    const ext = mimeType?.includes('mpeg') ? 'mp3' : mimeType?.includes('wav') ? 'wav' : 'webm';
     const audioBlob = new Blob([audioBytes], { type: mimeType || 'audio/webm' });
 
     // Create form data for ElevenLabs
     const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.webm');
+    formData.append('file', audioBlob, `audio.${ext}`);
     formData.append('model_id', 'scribe_v2');
     formData.append('tag_audio_events', 'true');
     formData.append('diarize', 'true');
